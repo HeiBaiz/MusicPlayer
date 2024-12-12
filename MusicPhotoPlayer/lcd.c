@@ -1,4 +1,5 @@
 #include "lcd.h"
+#include "display.h"
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -83,6 +84,8 @@ char *musicPaths[] = {
 char password[] = {"1234"};
 
 int block[] = {1, 0, 2}; //特效区块
+int blockflag = 0;
+
 
 int kind = 0;
 int imageIndex = 0;
@@ -103,6 +106,9 @@ pid_t temp;
 
 extern int touchData;
 extern int touchFlag;
+
+extern int arr1[800][480],abs_x[800],abs_y[480];
+extern int is_printed[800][480];
 
 /************************************************
  * 功能：初始化LCD屏幕
@@ -258,10 +264,10 @@ void bmpFun(unsigned char *p, int kind, int x0, int y0)
             break;
 
         case 1:
-            for(int k = 0; k < 3; k++)
+            for(int k = 2; k >= 0; k--)
             {
-                pnew = p + 160 * block[k] * (w*depth/8+full_bytes); 
-                for(int y = 0 + 160 * block[k]; y < 160 + 160 * block[k] ; y++)
+                pnew = p + 160 * k * (w*depth/8+full_bytes); 
+                for(int y = 0 + 160 * k; y < 160 + 160 * k; y++)
                 {
 
                     for(int x = 0; x < w; x++)
@@ -294,7 +300,7 @@ void bmpFun(unsigned char *p, int kind, int x0, int y0)
                         }
                     }
                 }
-                usleep(62500);
+                usleep(100000);
             }
             break;
         
@@ -374,7 +380,7 @@ void bmpFun(unsigned char *p, int kind, int x0, int y0)
 
             break;
 
-        case 3:
+        case 3: //幕布
 
             for(int y = (abs(h) - 1) / 2; y >= 0 ; y--)
             {
@@ -444,6 +450,40 @@ void bmpFun(unsigned char *p, int kind, int x0, int y0)
                 }
                 usleep(3000);
             }
+            break;
+
+        case 4:
+
+            readInformation(p);
+
+            randDisplay(x0, y0, 2);
+
+            break;
+
+        case 5:
+
+            readInformation(p);
+
+            randDisplay(x0, y0, 3);
+
+            break;
+        
+        case 6:
+
+            readInformation(p);
+
+            randDisplay(x0, y0, 4);
+
+            break;
+
+        case 7:
+
+            readInformation(p);
+
+            randDisplay(x0, y0, 5);
+
+            break;
+
     }
     
 }
@@ -818,11 +858,11 @@ void musicPhotoAlbum()
             {
                  case 11:
                 //printf("上滑\n");
-                kind = ++kind % 4;
+                kind = ++kind % 8;
                 break;
             case 12:
                 //printf("下滑\n");
-                kind = --kind < 0 ? 3 : kind % 4;
+                kind = --kind < 0 ? 7 : kind % 8;
                 break;
             case 13:
                 //printf("左滑\n");
@@ -995,7 +1035,7 @@ void musicPhotoAlbum()
                 if (menuFlag != 0)
                 {
                     musicIndex = ++musicIndex % 3;
-                printf("musicIndex = %d \n", musicIndex);
+                    printf("musicIndex = %d \n", musicIndex);
                 if (pid != 2) //两种可能，音乐进程还没结束，音乐播放完了，但还没检测进程状态
                 {
                     // //检测子进程是否结束
@@ -1012,12 +1052,21 @@ void musicPhotoAlbum()
                     //     pid = temp; 
 
                         //结束子进程
-                        kill(pid, SIGTERM);
-                        printf("子进程强制结束了\n");
+                        if (pid != 2 && musicFlag == 0) //由于一直在检查歌曲是否结束，如果满足这个条件说明歌曲被暂停，先启动
+                        {
+                            kill(pid, SIGCONT); //先启动该子进程，防止文件繁忙导致无法结束
+                            kill(pid, SIGTERM);
+                            printf("子进程强制结束了\n");
+                        }
+                        else if (pid != 2 && musicFlag == 1)
+                        {
+                            kill(pid, SIGTERM);
+                            printf("子进程强制结束了\n");
+                            //创建新的子进程
+                            createFork();
+                        }
 
-                        //创建新的子进程
                         
-                        createFork();
                     //}
                 }
                 
@@ -1047,12 +1096,19 @@ void musicPhotoAlbum()
                         //     pid = temp; 
 
                             //结束子进程
+                        if (pid != 2 && musicFlag == 0) //由于一直在检查歌曲是否结束，如果满足这个条件说明歌曲被暂停，先启动
+                        {
+                            kill(pid, SIGCONT); //先启动该子进程，防止文件繁忙导致无法结束
                             kill(pid, SIGTERM);
                             printf("子进程强制结束了\n");
-
+                        }
+                        else if (pid != 2 && musicFlag == 1)
+                        {
+                            kill(pid, SIGTERM);
+                            printf("子进程强制结束了\n");
                             //创建新的子进程
-                            
                             createFork();
+                        }
                         //}
                     }
                 }
