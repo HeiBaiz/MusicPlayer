@@ -12,9 +12,11 @@
 int flag_special = 1;
 int flag_thread = 0;
 int password[4] ={1,2,3,4};
+int res;
+pthread_t thread;
 
 /************************************************
- * 功能：初始化背景、组件
+ * 功能：初始化背景、相册组件
  * 参数：
  *      url：要打印的背景路径
  * 返回值：无
@@ -56,11 +58,14 @@ void *startupPicture() {
     }
 }
 
+/************************************************
+ * 功能：相册
+ * 参数：无
+ * 返回值：无
+*************************************************/
 int photo() {
     char url[15];
     int flag_url = 1;
-    pthread_t thread;
-    int res;
 
     lcdDrawBMP("./1.bmp",0,0,0);
     // 相册功能-获取触摸屏数据
@@ -90,7 +95,6 @@ int photo() {
                 printf("thread create error! error-%d\n",res);
                 return -1;
             }
-            // elementInit(url);
             break;
         case 2:
             if(flag_thread) {
@@ -111,27 +115,18 @@ int photo() {
                 printf("thread create error! error-%d\n",res);
                 return -1;
             }
-            // elementInit(url);
             break;
         case 3:
             printf("上划\n");
-            if(flag_special-- <= SPE_MIN){
-                flag_special = SPE_MAX;
-            }
-            // if(flag_special++ >= SPE_MAX){
-            //     flag_special = SPE_MIN;
+            // if(flag_special-- <= SPE_MIN){
+            //     flag_special = SPE_MAX;
             // }
-            // elementInit(url);
-            // elementInit(url);
+            if(flag_special++ >= SPE_MAX){
+                flag_special = SPE_MIN;
+            }
             break;
         case 4:
             return 0;
-            // printf("下划\n");
-            // if(flag_special++ >= SPE_MAX){
-            //     flag_special = SPE_MIN;
-            // }
-            // elementInit(url);
-            // break;
         default:
             printf("未知操作！\n");
             break;
@@ -139,9 +134,24 @@ int photo() {
     }
 }
 
-int main() {
+/************************************************
+ * 功能：音乐
+ * 参数：无
+ * 返回值：无
+*************************************************/
+int music() {
+    ;
+}
+
+/************************************************
+ * 功能：初始化组件
+ * 参数：无
+ * 返回值：
+ *          -1：错误
+*************************************************/
+int Init() {
     // 初始化lcd显示屏
-    int res = lcd_init();
+    res = lcd_init();
     if(res == -1) {
         perror("lcd init error!\n");
         return -1;
@@ -153,10 +163,17 @@ int main() {
         perror("touch init error!\n");
         return -1;
     }
-/********************************************************************************************************************************* */
+}
+
+/************************************************
+ * 功能：开机动画
+ * 参数：无
+ * 返回值：
+ *          -1：错误
+*************************************************/
+int Start() {
     // 过场动画
     lcd_brushBG(0);
-    pthread_t thread;
     res = pthread_create(&thread, NULL, startupPicture, NULL);
     if (0 != res)
     {
@@ -169,19 +186,20 @@ int main() {
     
     // 刷新背景色
     lcd_brushBG(0);
-    // res = pthread_create(&thread, NULL, , NULL);
-    // if (0 != res)
-    // {
-    //     printf("thread create error!\n");
-    //     return -1;
-    // }
 
     lcdDrawBMP("./suopin.bmp",0,0,0);
     // 上划解锁
     while(getTouchData(0)!=3){
     }
-/*********************************************************************************************************************************** */
-    //输入密码
+}
+
+/************************************************
+ * 功能：锁屏
+ * 参数：无
+ * 返回值：无
+*************************************************/
+void Lock() {
+    // 显示密码表盘
     char url[15];
     lcd_brushBG(0);
     lcdDrawBMP("./1.bmp",0,0,0);
@@ -210,9 +228,25 @@ int main() {
         usleep(100*1000);
         lcdDrawBMP("./suo.bmp",0,306,0);
     } while(1);
+}
 
+int main() {
+    // 初始化组件
+    if(Init()==-1)
+        return -1;
+
+    // 开机动画
+    if(Start()==-1)
+        return -1;
+
+    // 锁屏
+    Lock();
+    
+    // 桌面循环
     while(1) {
+        // 桌面背景
         elementInit("./1.bmp");
+        // 应用图标
         lcdDrawBMP("./photo.bmp",0,100,100);
         lcdDrawBMP("./music.bmp",0,220,100);
 
@@ -223,7 +257,7 @@ int main() {
                 break;
             case 2:
                 lcd_brushBG(0);
-                sleep(2);
+                music();
                 break;
             
             default:
