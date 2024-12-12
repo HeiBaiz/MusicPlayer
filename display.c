@@ -292,6 +292,21 @@ void randDisplay(int x0,int y0,int flag) {
             randDisplay2(x0,y0);
             printf("ok\n\n");
             break;
+        case 4:
+            printf("网格\n");
+            randDisplay3(x0,y0);
+            printf("ok\n\n");
+            break;
+        case 5:
+            printf("幕布\n");
+            randDisplay4(x0,y0);
+            printf("ok\n\n");
+            break;
+        case 6:
+            printf("矩形\n");
+            randDisplay5(x0,y0);
+            printf("ok\n\n");
+            break;
         default:
             printf("switch number-%d error!\n\n",flag);
             return;
@@ -331,6 +346,7 @@ void randDisplay1(int x0,int y0) {
     // 显示图片
     for(int i=0;i<800;i++) {
         for(int j=0;j<480;j++) {
+            pthread_testcancel();
             lcdDrawPoint(abs_x[i]+x0,j+y0,arr1[abs_x[i]][j]);
         }
         usleep(50);
@@ -349,6 +365,7 @@ void randDisplay2(int x0,int y0) {
  
     // 输出二维数组的所有元素，确保每个元素只被输出一次
     for (int i = 0; i < 800 * 480; i++) {
+        pthread_testcancel();
         if(i%800==0&&i!=0){
             usleep(1);
         }
@@ -356,3 +373,68 @@ void randDisplay2(int x0,int y0) {
     }
 }
 
+/************************************************
+ * 功能：棋盘打印图片
+ * 参数：
+ *      x0,y0：打印坐标
+ * 返回值：无
+*************************************************/
+void randDisplay3(int x0,int y0) {
+    // 显示图片
+    for(int k=0;k<2;k++){
+        usleep(1000*100);
+        for(int i=0;i<5;i++) {
+            for(int j=0;j<5;j++) {
+                for(int m=0;m<80;m++) {
+                    for(int n=0;n<48;n++) {
+                        pthread_testcancel();
+                        lcdDrawPoint(x0+m+i*160+k*80,y0+n+j*96,arr1[m+i*160+k*80][n+j*96]);
+                        lcdDrawPoint(x0+m+i*160+80-k*80,y0+n+j*96+48,arr1[m+i*160+80-k*80][n+j*96+48]);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/************************************************
+ * 功能：幕布打印图片
+ * 参数：
+ *      x0,y0：打印坐标
+ * 返回值：无
+*************************************************/
+void randDisplay4(int x0,int y0) {
+    // 显示图片
+    for(int i=0;i<400;i++){
+        for(int j=0;j<480;j++){
+            pthread_testcancel();
+            lcdDrawPoint(x0+399-i,y0+j,arr1[399-i][j]);
+            lcdDrawPoint(x0+400+i,y0+j,arr1[400+i][j]);
+        }
+        usleep(1000*3);  
+    }
+}
+
+/************************************************
+ * 功能：四格旋转打印图片
+ * 参数：
+ *      x0,y0：打印坐标
+ * 返回值：无
+*************************************************/
+void randDisplay5(int x0,int y0) {
+    int xMin,xMax,yMin,yMax;
+    // 显示图片
+    for(int m=0;m<80;m++){
+        xMin=m*5,xMax=800-xMin;
+        yMin=m*3,yMax=480-yMin;
+        for(int i=0;i<800;i++){
+            for(int j=0;j<480;j++){
+                pthread_testcancel();
+                if(i<xMin||i>xMax||j<yMin||j>yMax){
+                    lcdDrawPoint(x0+i,y0+j,arr1[i][j]);
+                }
+            }
+        }
+        usleep(1000*3);
+    }
+}
