@@ -173,6 +173,12 @@ int getTouchData() //一次读两个事件，所以一次要放两个进来
                         //点击previous
                         return 24;
                     }
+                    else if (x >=680 && x <= 800 && y >= 285 && y <= 360)
+                    {
+                        //点击自动播放按钮
+                        return 25;
+                    }
+                    
                     else
                     {
                         //未知操作

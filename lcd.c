@@ -67,7 +67,9 @@ char *buttonImage[] = {
 char *musicToolsImage[] = {
     "menu.bmp",
     "tools1.bmp",
-    "tools2.bmp"
+    "tools2.bmp",
+    "tools3.bmp",
+    "tools4.bmp"
 };
 
 
@@ -93,6 +95,7 @@ int v = 0;
 int menuFlag = 0;
 int musicFlag = 0;
 int musicIndex = 0;
+int autoMusicFlag = 0;
 int status;
 
 pid_t pid = -2;
@@ -439,7 +442,7 @@ void bmpFun(unsigned char *p, int kind, int x0, int y0)
                         }
                     }
                 }
-                usleep(10000);
+                usleep(3000);
             }
     }
     
@@ -752,6 +755,62 @@ void musicPhotoAlbum()
 
     while(1)
     {
+
+        //音乐自动播放功能
+
+        //两种可能，音乐还在播放，音乐播放完了，但还没检测进程状态
+        //检查子进程是否结束函数，如果pid != -2代表曾经播放过音乐或者正在播放，所以需要检查歌曲是否结束
+        // 已结束 -- pid赋值为-2
+        // 未结束 -- 不做操作
+        if (pid != -2)
+        {
+            temp = pid;
+            pid = waitpid(temp, &status, WNOHANG);
+            if (pid == temp) //歌曲已结束
+            {
+                pid = -2; //pid恢复默认值
+
+                //刷新歌曲工具栏
+                //音乐结束
+                musicFlag = 0;
+                if (menuFlag != 0 && autoMusicFlag == 0)
+                {
+                    menuFlag = 1;
+                    lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                    musicTools(menuFlag);
+                }
+                else if (menuFlag != 0 && autoMusicFlag == 1)
+                {
+                    menuFlag = 2;
+                    lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                    musicTools(menuFlag);
+                }
+
+            }
+            else //歌曲未结束
+            {
+                pid = temp; //继续保持当前子进程pid
+            }
+        }
+        
+        //首先检测pid是否为-2，检测是否在播放音乐，若是没有播放过检查autoMusicFlag是否为1
+        // autoMusicFlag == 1  ----创建子进程播放音乐
+        // autoMusicFlag == 0  ----不做任何事
+        if (pid == -2 && autoMusicFlag == 1)
+        {
+            musicIndex = ++musicIndex % 3; //先让歌曲预备到下一首
+            //自动播放音乐
+            createFork();
+            //刷新歌曲工具栏
+            musicFlag = 1;
+            if (menuFlag != 0)
+            {
+                menuFlag = 4;
+                lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                musicTools(menuFlag);
+            }
+        }
+
         if (touchFlag == 1)
         {
             //printf("touchData = %d \n", touchData);
@@ -763,13 +822,13 @@ void musicPhotoAlbum()
                 break;
             case 12:
                 //printf("下滑\n");
-                kind = --kind < 0 ? 2 : kind % 4;
+                kind = --kind < 0 ? 3 : kind % 4;
                 break;
             case 13:
                 //printf("左滑\n");
                 
                 imageIndex = ++imageIndex % 3;
-                lcdDrawBMP(0,0,imagePaths[imageIndex], kind);
+                lcdDrawBMP(0, 0, imagePaths[imageIndex], kind);
 
                 musicTools(menuFlag); //音乐菜单栏
                 //printf("imageIndex：%d ", imageIndex); 
@@ -777,7 +836,7 @@ void musicPhotoAlbum()
             case 14:
                 //printf("右滑\n");
                 imageIndex = --imageIndex < 0 ? 2 : imageIndex % 3;
-                lcdDrawBMP(0,0,imagePaths[imageIndex], kind);
+                lcdDrawBMP(0, 0, imagePaths[imageIndex], kind);
 
                 musicTools(menuFlag); //音乐菜单栏
                 //printf("imageIndex：%d ", imageIndex);
@@ -788,20 +847,36 @@ void musicPhotoAlbum()
                 {
                     if (musicFlag == 0)
                     {
-                        menuFlag = 1;
-                        musicTools(menuFlag);
+                        if (autoMusicFlag == 0)
+                        {
+                            menuFlag = 1;
+                            musicTools(menuFlag);
+                        }
+                        else
+                        {
+                            menuFlag = 2;
+                            musicTools(menuFlag);
+                        }
                     }
                     
                     else
                     {
-                        menuFlag = 2;
-                        musicTools(menuFlag);
+                        if (autoMusicFlag == 0)
+                        {
+                            menuFlag = 3;
+                            musicTools(menuFlag);
+                        }
+                        else
+                        {
+                            menuFlag = 4;
+                            musicTools(menuFlag);
+                        }
                     }
                 }
                 else
                 {
                     menuFlag = 0;
-                    lcdDrawBMP(0,0,imagePaths[imageIndex], 0);
+                    lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
                     musicTools(menuFlag);
                 }
                 break;
@@ -819,7 +894,7 @@ void musicPhotoAlbum()
                 /*这里的问题是，若是子进程没有结束，那么pid就会被waitpid函数赋值为0，使得丢失子进程号导致错误*/
                 
 
-                if (musicFlag == 0 && pid == -2)
+                if (musicFlag == 0 && pid == -2 && menuFlag != 0) //menuFLag != 0 是为了当菜单栏未显示出来的时候不能点击其他功能按钮
                 {
                     //创建子进程播放音乐
 
@@ -828,36 +903,46 @@ void musicPhotoAlbum()
                     musicFlag = 1;
                     if (menuFlag != 0)
                     {
-                        menuFlag = 2;
-                        lcdDrawBMP(0,0,imagePaths[imageIndex], 0);
-                        musicTools(menuFlag);
+                        if (autoMusicFlag == 0)
+                        {
+                            menuFlag = 3;
+                            lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                            musicTools(menuFlag);
+                        }
+                        else
+                        {
+                            menuFlag = 4;
+                            lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                            musicTools(menuFlag);
+                        }
+                        
                     }
 
                     //kill(pid, SIGTERM);
 
                 }
-                else if (musicFlag == 1 && pid != -2) //两种可能，音乐还在播放，音乐播放完了，但还没检测进程状态
+                else if (musicFlag == 1 && pid != -2 && menuFlag != 0) 
                 {
-                    //检测子进程是否结束，防止歌曲播放结束后，pid没有更新，导致以为一直有一个进程在放歌
-                    temp = pid;
-                    pid = waitpid(temp, &status, WNOHANG); //检测子进程是否结束，并且不阻塞父进程
-                    if (pid == temp) //创建的进程已经结束了
-                    {
-                        pid = -2;//回到初始数值
+                    // //检测子进程是否结束，防止歌曲播放结束后，pid没有更新，导致以为一直有一个进程在放歌
+                    // temp = pid;
+                    // pid = waitpid(temp, &status, WNOHANG); //检测子进程是否结束，并且不阻塞父进程
+                    // if (pid == temp) //创建的进程已经结束了
+                    // {
+                    //     pid = -2;//回到初始数值
 
 
-                        //音乐结束
-                        musicFlag = 0;
-                        if (menuFlag != 0)
-                        {
-                            menuFlag = 1;
-                            lcdDrawBMP(0,0,imagePaths[imageIndex], 0);
-                            musicTools(menuFlag);
-                        }
-                    }
-                    else //进程未结束，并且歌曲还在播放，所以需要暂停子进程
-                    {
-                        pid = temp; //归还一下进程号
+                    //     //音乐结束
+                    //     musicFlag = 0;
+                    //     if (menuFlag != 0)
+                    //     {
+                    //         menuFlag = 1;
+                    //         lcdDrawBMP(0,0,imagePaths[imageIndex], 0);
+                    //         musicTools(menuFlag);
+                    //     }
+                    // }
+                    //else //进程未结束，并且歌曲还在播放，所以需要暂停子进程
+                    //{
+                    //    pid = temp; //归还一下进程号
 
                         //暂停子进程
                         kill(pid, SIGSTOP);
@@ -865,45 +950,66 @@ void musicPhotoAlbum()
                         musicFlag = 0;
                         if (menuFlag != 0)
                         {
-                            menuFlag = 1;
-                            lcdDrawBMP(0,0,imagePaths[imageIndex], 0);
-                            musicTools(menuFlag);
+                            if (autoMusicFlag == 0)
+                            {
+                                menuFlag = 1;
+                                lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                                musicTools(menuFlag);
+                            }
+                            else
+                            {
+                                menuFlag = 2;
+                                lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                                musicTools(menuFlag);
+                            }
                         }
-                    }
+                    //}
                     
                 }
-                else if (musicFlag == 0 && pid != -2) //进程被暂停了，现在启动进程
+                else if (musicFlag == 0 && pid != -2 && menuFlag != 0) //进程被暂停了，现在启动进程
                 {
                     kill(pid, SIGCONT); //启动子进程
                     printf("子进程重新启动了\n");
                     musicFlag = 1;
                     if (menuFlag != 0)
                     {
-                        menuFlag = 2;
-                        lcdDrawBMP(0,0,imagePaths[imageIndex], 0);
-                        musicTools(menuFlag);
+                        if (autoMusicFlag == 0)
+                        {
+                            menuFlag = 3;
+                            lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                            musicTools(menuFlag);
+                        }
+                        else
+                        {
+                            menuFlag = 4;
+                            lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                            musicTools(menuFlag);
+                        }
+                        
                     }
                 }
                 break;
                 
             case 23:
                 //下一首
-                musicIndex = ++musicIndex % 3;
+                if (menuFlag != 0)
+                {
+                    musicIndex = ++musicIndex % 3;
                 printf("musicIndex = %d \n", musicIndex);
                 if (pid != 2) //两种可能，音乐进程还没结束，音乐播放完了，但还没检测进程状态
                 {
-                    //检测子进程是否结束
-                    temp = pid;
-                    pid = waitpid(temp, &status, WNOHANG); 
-                    if (pid == temp) //子进程结束
-                    {
-                        //创建新的子进程
+                    // //检测子进程是否结束
+                    // temp = pid;
+                    // pid = waitpid(temp, &status, WNOHANG); 
+                    // if (pid == temp) //子进程结束
+                    // {
+                    //     //创建新的子进程
                         
-                        createFork();
-                    }
-                    else //进程未结束
-                    {
-                        pid = temp; 
+                    //     createFork();
+                    // }
+                    // else //进程未结束
+                    // {
+                    //     pid = temp; 
 
                         //结束子进程
                         kill(pid, SIGTERM);
@@ -912,39 +1018,84 @@ void musicPhotoAlbum()
                         //创建新的子进程
                         
                         createFork();
-                    }
+                    //}
                 }
                 
                 //这里的话，没进入if条件，即没有音乐被暂停或者被播放或播放过，单纯切换到下一首歌并且不播放
+                }
 
                 break;
             case 24:
-                //上一首
-                musicIndex = --musicIndex < 0 ? 2 : musicIndex % 3;
-                printf("musicIndex = %d \n", musicIndex);
-                if (pid != 2) //两种可能，音乐进程还没结束，音乐播放完了，但还没检测进程状态
+                if (menuFlag != 0)
                 {
-                    //检测子进程是否结束
-                    temp = pid;
-                    pid = waitpid(temp, &status, WNOHANG); 
-                    if (pid == temp) //子进程结束
+                    //上一首
+                    musicIndex = --musicIndex < 0 ? 2 : musicIndex % 3;
+                    printf("musicIndex = %d \n", musicIndex);
+                    if (pid != 2) //两种可能，音乐进程还没结束，音乐播放完了，但还没检测进程状态
                     {
-                        //创建新的子进程
-                        
-                        createFork();
+                        // //检测子进程是否结束
+                        // temp = pid;
+                        // pid = waitpid(temp, &status, WNOHANG); 
+                        // if (pid == temp) //子进程结束
+                        // {
+                        //     //创建新的子进程
+                            
+                        //     createFork();
+                        // }
+                        // else //进程未结束
+                        // {
+                        //     pid = temp; 
+
+                            //结束子进程
+                            kill(pid, SIGTERM);
+                            printf("子进程强制结束了\n");
+
+                            //创建新的子进程
+                            
+                            createFork();
+                        //}
                     }
-                    else //进程未结束
+                }
+                break;
+            
+            case 25:
+                //自动播放 or 取消自动播放
+                if (menuFlag != 0)
+                {
+                    if (autoMusicFlag == 0)
+                {
+                    autoMusicFlag = 1;
+                    if (menuFlag != 0 && musicFlag == 0)
                     {
-                        pid = temp; 
-
-                        //结束子进程
-                        kill(pid, SIGTERM);
-                        printf("子进程强制结束了\n");
-
-                        //创建新的子进程
-                        
-                        createFork();
+                        menuFlag = 2;
+                        lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                        musicTools(menuFlag);
                     }
+                    else if (menuFlag != 0 && musicFlag == 1)
+                    {
+                        menuFlag = 4;
+                        lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                        musicTools(menuFlag);
+                    }
+                }
+                else
+                {
+                    autoMusicFlag = 0;
+                    if (menuFlag != 0 && musicFlag == 0)
+                    {
+                        menuFlag = 1;
+                        lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                        musicTools(menuFlag);
+                    }
+                    else if (menuFlag != 0 && musicFlag == 1)
+                    {
+                        menuFlag = 3;
+                        lcdDrawBMP(0, 0, imagePaths[imageIndex], 0);
+                        musicTools(menuFlag);
+                    }
+                }
+
+                printf("自动播放 or 不自动播放");
                 }
                 break;
 
