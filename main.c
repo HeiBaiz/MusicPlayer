@@ -1,8 +1,14 @@
 #include "display.h"
 #include "touch.h"
+#include "music.h"
 
 #include <stdio.h>
 #include <pthread.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #define URL_MAX 3
 #define URL_MIN 1
@@ -12,7 +18,8 @@
 int flag_special = 1;
 int flag_thread = 0;
 int password[4] ={1,2,3,4};
-int res;
+int res,musicdata=-1;
+extern int musicFlag;
 pthread_t thread;
 
 /************************************************
@@ -135,21 +142,74 @@ int photo() {
 }
 
 /************************************************
+ * 功能：音乐读数据
+ * 参数：无
+ * 返回值：无
+*************************************************/
+void *musicData() {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);  // 允许取消
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL); // 使用延迟取消
+    while(1){
+        musicdata =  getTouchData(3);
+        printf("%d\n",musicdata);
+        pthread_testcancel();
+    }
+}
+
+/************************************************
  * 功能：音乐
  * 参数：无
  * 返回值：无
 *************************************************/
 int music() {
+    int status;
+    lcdDrawBMP("./1.bmp",0,0,0);
+    lcdDrawBMP("./next.bmp",0,475,400);
+    lcdDrawBMP("./previous.bmp",0,275,400);
+    lcdDrawBMP("./start.bmp",0,375,400);
+    printf("music\n");
+    pid_t pid = -2;
+    res = pthread_create(&thread, NULL, musicData, NULL);
+    if (0 != res)
+    {
+        printf("thread create error! error-%d\n",res);
+        return -1;
+    }
     while(1){
-        lcdDrawBMP("./1.bmp",0,0,0);
-        switch (getTouchData(3))
+        switch (musicdata)
         {
         case 1:
-            /* code */
+            musicPlayer(&pid,1);
+            
+            lcdDrawBMP("./stop.bmp",0,375,400);
+            musicdata=-1;
             break;
-        
+        case 2:
+            musicPlayer(&pid,2);
+            musicdata=-1;
+            break;
+        case 3:
+            musicPlayer(&pid,3);
+            musicdata=-1;
+            break;
+        case 4:
+            kill(pid,SIGTERM);
+            pthread_cancel(thread);
+            musicdata=-1;
+            musicFlag==0;
+            return 0;
         default:
+            musicdata=-1;
             break;
+        }
+        if(pid == waitpid(pid, &status, WNOHANG)) {
+            pid = -2;
+            musicFlag=0;
+            // printf("musicFlag=%d\n",musicFlag);
+        }
+        if(musicFlag==0) {
+            printf("暂停\n");
+            lcdDrawBMP("./start.bmp",0,375,400);
         }
     }
 }
@@ -265,10 +325,12 @@ int main() {
             case 1:
                 lcd_brushBG(0);
                 photo();
+                pthread_join(thread, NULL);
                 break;
             case 2:
                 lcd_brushBG(0);
                 music();
+                pthread_join(thread, NULL);
                 break;
             
             default:
@@ -278,7 +340,6 @@ int main() {
     
     
 
-    pthread_join(thread, NULL);
     //关闭触摸屏
     touchClose();
     //关闭LCD屏幕

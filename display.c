@@ -208,8 +208,7 @@ void lcdDrawBMP(const char *pic_path, int flag, int x0,int y0) {
                     arr1[x][y]=color;
                     is_printed[x][y] = 0;
                 }else {
-                    lcdDrawPoint(x+x0,y+y0,color);
-                }
+                 }
             }
         }
         //每显示完一行像素点，就需要跳过后面的填充字节

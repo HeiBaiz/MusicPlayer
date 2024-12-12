@@ -9,68 +9,88 @@
 
 char path1[]="/usr/bin/madplay",path2[]="./1.mp3";
 int j=1;
-int musicFlag=0,temp;
+int musicFlag=0,temp,res;
+int status;
 
-#define musicMin 0
+#define musicMin 1
 #define musicMax 3
 
-int musicPlayer(pid_t *pid,int i){
-    // pid_t pid = -2;
+int musicPlayer(pid_t * pid,int i){
+    // if(*pid == waitpid(*pid, &status, WNOHANG))
     switch(i){
-        case 1:
-            // 播放
-            if(pid==-2){
-                pid = fork();
-                if (-1 == pid)
-                {
-                    perror("fork error");
+    case 1:
+        // 播放
+        if(*pid==-2 && musicFlag==0){
+            musicFlag = 1;
+            *pid = fork();
+            if (-1 == *pid) {
+                perror("fork error");
+                return -1;
+            } else if(*pid==0) {
+                int res = execl(path1,"madplay",path2,NULL);
+                if (res == -1) {
+                    perror("execl error");
                     return -1;
-                } else if(pid==0) {
-                    int res = execl(path1,"madpaly",path2,NULL);
-                    if (res == -1)
-                    {
-                        perror("execl error");
-                        return -1;
-                    }
                 }
             }
-        case 2:
-            // 上一曲
-            kill(pid,SIGTERM);
-            if(j-- == musicMin){
-                j = musicMax;
-            }
-            sprintf(path2,"./%d.mp3",j);
-            int res = execl(path1,"madpaly",path2,NULL);
+        } else if (musicFlag) {
+            kill(*pid,SIGSTOP);
+            musicFlag=0;
+        } else {
+            kill(*pid,SIGCONT);
+            musicFlag=1;
+        }
+        break;
+    case 2:
+        // 上一曲
+        if(musicFlag==0){
+            kill(*pid,SIGCONT);
+            musicFlag = 1;
+        }
+        kill(*pid,SIGTERM);
+        if(j-- == musicMin) {
+            j = musicMax;
+        }
+        sprintf(path2,"./%d.mp3",j);
+        
+        *pid = fork();
+        if(-1 == *pid) {
+            perror("fork error");
+            return -1;
+        } else if(*pid==0) {
+            res = execl(path1,"madplay",path2,NULL);
             if (res == -1)
             {
                 perror("execl error");
                 return -1;
             }
-        case 3:
-            // 下一曲
-            kill(pid,SIGTERM);
-            if(j++ == musicMax){
-                j = musicMin;
-            }
-            sprintf(path2,"./%d.mp3",j);
-            int res = execl(path1,"madpaly",path2,NULL);
+        }
+        break;
+    case 3:
+        // 下一曲
+        if(musicFlag==0){
+            kill(*pid,SIGCONT);
+            musicFlag = 1;
+        }
+        kill(*pid,SIGTERM);
+        if(j++ == musicMax){
+            j = musicMin;
+        }
+        sprintf(path2,"./%d.mp3",j);
+        *pid = fork();
+        if(-1 == *pid) {
+            perror("fork error");
+            return -1;
+        } else if(*pid==0) {
+            res = execl(path1,"madplay",path2,NULL);
             if (res == -1)
             {
                 perror("execl error");
                 return -1;
             }
-        case 4:
-            // 暂停
-            if(!musicFlag){
-                kill(pid,SIGSTOP);
-                musicFlag=1;
-            }else {
-                kill(pid,SIGCONT);
-                musicFlag-0;
-            }
-            
-
+        }
+        break;
     }
-    execl()
+    printf("%s\n",path2);
 }
+

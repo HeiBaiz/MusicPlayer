@@ -134,6 +134,18 @@ int getTouchData(int lock0) {
                             return 2;
                         }
 
+                    } else if(lock0==3){
+                        // 音乐响应
+                        if (x>=375 && x<425 && y>=400 && y<450) {
+                            printf("播放/暂停\n");
+                            return 1;
+                        } else if (x>=275 && x<325 && y>=400 && y<450) {
+                            printf("上一首\n");
+                            return 2;
+                        } else if (x>=475 && x<525 && y>=400 && y<450) {
+                            printf("下一首\n");
+                            return 3;
+                        }
                     }
                 } else {
                     // 滑动，判断是水平滑动还是垂直滑动
@@ -169,6 +181,11 @@ int getTouchData(int lock0) {
                             // 未知操作
                             return 10;
                         }
+                    }else if (lock0==3) {
+                       if(y0<0) {
+                            // 下划
+                            return 4;
+                        } 
                     }
                 }
             }
