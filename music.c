@@ -1,4 +1,5 @@
 #include "music.h"
+#include "display.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +9,8 @@
 #include <sys/wait.h>
 
 char path1[]="/usr/bin/madplay",path2[]="./1.mp3";
-int j=1;
+char url[15];
+int flag_j=1;
 int musicFlag=0,temp,res;
 int status;
 
@@ -27,6 +29,7 @@ int musicPlayer(pid_t * pid,int i){
                 perror("fork error");
                 return -1;
             } else if(*pid==0) {
+                sprintf(path2,"./%d.mp3",flag_j);
                 int res = execl(path1,"madplay",path2,NULL);
                 if (res == -1) {
                     perror("execl error");
@@ -48,10 +51,10 @@ int musicPlayer(pid_t * pid,int i){
             musicFlag = 1;
         }
         kill(*pid,SIGTERM);
-        if(j-- == musicMin) {
-            j = musicMax;
+        if(flag_j-- == musicMin) {
+            flag_j = musicMax;
         }
-        sprintf(path2,"./%d.mp3",j);
+        sprintf(path2,"./%d.mp3",flag_j);
         
         *pid = fork();
         if(-1 == *pid) {
@@ -65,6 +68,8 @@ int musicPlayer(pid_t * pid,int i){
                 return -1;
             }
         }
+        sprintf(url,"./%d.bmp",flag_j);
+        lcdDrawBMP(url,0,0,0);
         break;
     case 3:
         // 下一曲
@@ -73,10 +78,10 @@ int musicPlayer(pid_t * pid,int i){
             musicFlag = 1;
         }
         kill(*pid,SIGTERM);
-        if(j++ == musicMax){
-            j = musicMin;
+        if(flag_j++ == musicMax){
+            flag_j = musicMin;
         }
-        sprintf(path2,"./%d.mp3",j);
+        sprintf(path2,"./%d.mp3",flag_j);
         *pid = fork();
         if(-1 == *pid) {
             perror("fork error");
@@ -89,6 +94,8 @@ int musicPlayer(pid_t * pid,int i){
                 return -1;
             }
         }
+        sprintf(url,"./%d.bmp",flag_j);
+        lcdDrawBMP(url,0,0,0);
         break;
     }
     printf("%s\n",path2);

@@ -35,6 +35,10 @@ void touchClose()
  * 功能：获取触摸屏数据
  * 参数：
  *    lock：选择返回类
+ *       0：响应锁屏的触摸屏操作
+ *       1：响应桌面的触摸屏操作
+ *       2：响应相册的触摸屏操作
+ *       3：响应音乐的触摸屏操作
  * 返回值：
  *      -1：获取触摸屏数据失败
  *       0：未知操作
@@ -77,14 +81,10 @@ int getTouchData(int lock0) {
         } else if (ev.type == EV_KEY && ev.code == BTN_TOUCH) {
             //触摸屏点击事件
             if (ev.value == 1) {
-                // 触摸屏被按下(手指接触触摸屏)
-                // printf("pressed!\n");
                 // 获取触摸点的起始坐标
                 x0 = x;
                 y0 = y;
             } else if (ev.value == 0) {
-                // 触摸屏被释放(手指离开触摸屏)
-                // printf("released!\n");
                 // 判断是点击还是滑动
                 if (abs(y-y0) < 50 && abs(x-x0) < 50) {
                     // 点击

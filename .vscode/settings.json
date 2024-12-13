@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "*.dbclient-js": "javascript",
-        "types.h": "c"
+        "types.h": "c",
+        "touch.h": "c"
     }
 }

@@ -19,7 +19,7 @@ int flag_special = 1;
 int flag_thread = 0;
 int password[4] ={1,2,3,4};
 int res,musicdata=-1;
-extern int musicFlag;
+extern int musicFlag,flag_j;
 pthread_t thread;
 
 /************************************************
@@ -39,10 +39,6 @@ void *elementInit(void *data) {
     // 显示背景图
     randDisplay(0,0,flag_special);
     pthread_testcancel();
-    // // 显示按钮
-    // lcdDrawRect(690,10,100,50,COLOR_RED);
-    // lcdDrawRect(690,420,100,50,COLOR_BLUE);
-    // lcdDrawRect(350,400,100,50,COLOR_PURPLE);
     flag_thread = 0;
 }
 
@@ -133,6 +129,7 @@ int photo() {
             }
             break;
         case 4:
+            printf("下划\n");
             return 0;
         default:
             printf("未知操作！\n");
@@ -180,23 +177,32 @@ int music() {
         {
         case 1:
             musicPlayer(&pid,1);
-            
             lcdDrawBMP("./stop.bmp",0,375,400);
             musicdata=-1;
             break;
         case 2:
             musicPlayer(&pid,2);
             musicdata=-1;
+            lcdDrawBMP("./stop.bmp",0,375,400);
+            lcdDrawBMP("./next.bmp",0,475,400);
+            lcdDrawBMP("./previous.bmp",0,275,400);
             break;
         case 3:
             musicPlayer(&pid,3);
             musicdata=-1;
+            lcdDrawBMP("./stop.bmp",0,375,400);
+            lcdDrawBMP("./next.bmp",0,475,400);
+            lcdDrawBMP("./previous.bmp",0,275,400);
             break;
         case 4:
+            if(musicFlag==0){
+                kill(pid,SIGCONT);
+            }
             kill(pid,SIGTERM);
             pthread_cancel(thread);
+            flag_j=1;
             musicdata=-1;
-            musicFlag==0;
+            musicFlag=0;
             return 0;
         default:
             musicdata=-1;
@@ -208,7 +214,7 @@ int music() {
             // printf("musicFlag=%d\n",musicFlag);
         }
         if(musicFlag==0) {
-            printf("暂停\n");
+            // printf("暂停\n");
             lcdDrawBMP("./start.bmp",0,375,400);
         }
     }
@@ -284,17 +290,23 @@ void Lock() {
     // 输入和验证密码
     do {
         for(int i=0;i<4;i++){
+            // 确保password0[i]里保存的是有效数据
             do {
                 password0[i]=getTouchData(0);
                 sprintf(url,"./suo%d.bmp",i+1);
             } while (password0[i]<0||password0[i]>9);
+            // 更新密码输入位数图片
             lcdDrawBMP(url,0,306,0);
-            printf("password_%d=%d\n",i,password0[i]);
+            // printf("password_%d=%d\n",i,password0[i]);
         }
 
-        if(password0[0]==password[0]&&password0[1]==password[1]&&password0[2]==password[2]&&password0[3]==password[3]){
+        // 对比输入和存储的密码，相等就退出while循环
+        if(password0[0]==password[0]&&password0[1]==password[1]
+        &&password0[2]==password[2]&&password0[3]==password[3]) {
             break;
         }
+
+        // 显示密码错误图片
         lcdDrawBMP("./error.bmp",0,360,0);
         usleep(100*1000);
         lcdDrawBMP("./suo.bmp",0,306,0);
